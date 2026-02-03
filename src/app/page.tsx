@@ -20,6 +20,14 @@ interface Video {
   description?: string;
 }
 
+interface Settings {
+  about_text?: string;
+  contact_email?: string;
+  phone_number?: string;
+  instagram_url?: string;
+  facebook_url?: string;
+}
+
 // Extract YouTube video ID from URL
 function getYouTubeId(url: string): string | null {
   const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?\s]+)/);
@@ -29,6 +37,7 @@ function getYouTubeId(url: string): string | null {
 export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [videos, setVideos] = useState<Video[]>([]);
+  const [settings, setSettings] = useState<Settings>({});
   const [allImagesCover, setAllImagesCover] = useState<string | null>(null);
   const [totalImages, setTotalImages] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -92,6 +101,7 @@ export default function Home() {
 
         setCategories(categoriesWithData);
         setVideos(Array.isArray(videosData) ? videosData : []);
+        setSettings(settingsData || {});
         setLoading(false);
       })
       .catch((error) => {
@@ -264,6 +274,97 @@ export default function Home() {
             </div>
           </div>
         )}
+
+        {/* Divider before About */}
+        <div className="border-t border-zinc-900 my-12" />
+
+        {/* Section 4: About */}
+        <section id="about" className="mb-12">
+          <h2 className="text-xl lg:text-2xl text-white font-light tracking-wide mb-8">
+            About
+          </h2>
+          {settings.about_text ? (
+            <div className="space-y-4 max-w-2xl">
+              {settings.about_text.split('\n\n').map((paragraph, index) => (
+                <p key={index} className="text-zinc-400 leading-relaxed text-sm lg:text-base">
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="text-zinc-600 text-sm">
+              About information coming soon.
+            </p>
+          )}
+        </section>
+
+        {/* Divider before Contact */}
+        <div className="border-t border-zinc-900 my-12" />
+
+        {/* Section 5: Contact */}
+        <section id="contact">
+          <h2 className="text-xl lg:text-2xl text-white font-light tracking-wide mb-8">
+            Contact
+          </h2>
+          <div className="space-y-4 text-sm">
+            {settings.contact_email && (
+              <p>
+                <span className="text-zinc-600">Email</span>
+                <br />
+                <a
+                  href={`mailto:${settings.contact_email}`}
+                  className="text-zinc-400 hover:text-white transition-colors"
+                >
+                  {settings.contact_email}
+                </a>
+              </p>
+            )}
+            {settings.phone_number && (
+              <p>
+                <span className="text-zinc-600">Phone</span>
+                <br />
+                <a
+                  href={`tel:${settings.phone_number}`}
+                  className="text-zinc-400 hover:text-white transition-colors"
+                >
+                  {settings.phone_number}
+                </a>
+              </p>
+            )}
+            {(settings.instagram_url || settings.facebook_url) && (
+              <div className="pt-2">
+                <span className="text-zinc-600 block mb-2">Social</span>
+                <div className="flex gap-4">
+                  {settings.instagram_url && (
+                    <a
+                      href={settings.instagram_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-zinc-400 hover:text-white transition-colors"
+                    >
+                      Instagram
+                    </a>
+                  )}
+                  {settings.facebook_url && (
+                    <a
+                      href={settings.facebook_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-zinc-400 hover:text-white transition-colors"
+                    >
+                      Facebook
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+            {!settings.contact_email && !settings.phone_number && !settings.instagram_url && !settings.facebook_url && (
+              <p className="text-zinc-600">
+                Contact information coming soon.
+              </p>
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );
