@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { Image as ImageType } from '@/types';
@@ -18,7 +18,6 @@ export default function ImageLightbox({
   onClose,
   onNavigate,
 }: ImageLightboxProps) {
-  const [zoom, setZoom] = useState(false);
   const currentImage = images[currentIndex];
 
   useEffect(() => {
@@ -40,14 +39,12 @@ export default function ImageLightbox({
   const handlePrev = () => {
     if (currentIndex > 0) {
       onNavigate(currentIndex - 1);
-      setZoom(false);
     }
   };
 
   const handleNext = () => {
     if (currentIndex < images.length - 1) {
       onNavigate(currentIndex + 1);
-      setZoom(false);
     }
   };
 
@@ -96,27 +93,23 @@ export default function ImageLightbox({
         </button>
       )}
 
-      {/* Image - Click to zoom */}
+      {/* Image - fills the screen */}
       <div
-        className={`relative w-full h-full flex items-center justify-center p-12 transition-all duration-300 ${
-          zoom ? 'cursor-zoom-out' : 'cursor-zoom-in'
-        }`}
+        className="relative w-full h-full"
         onClick={(e) => {
           e.stopPropagation();
-          setZoom(!zoom);
+          onClose();
         }}
       >
-        <div className={`relative transition-all duration-500 ${zoom ? 'w-auto h-auto max-w-none max-h-none' : 'max-w-full max-h-full'}`}>
-          <Image
-            src={imageSrc}
-            alt={currentImage.title}
-            width={zoom ? (currentImage.width || 2400) : 1200}
-            height={zoom ? (currentImage.height || 1600) : 800}
-            className={`object-contain ${zoom ? 'max-w-none' : 'max-w-full max-h-[85vh]'}`}
-            priority
-            quality={zoom ? 100 : 90}
-          />
-        </div>
+        <Image
+          src={imageSrc}
+          alt={currentImage.title}
+          fill
+          className="object-contain"
+          priority
+          quality={90}
+          sizes="100vw"
+        />
       </div>
 
       {/* Counter - minimalist */}
