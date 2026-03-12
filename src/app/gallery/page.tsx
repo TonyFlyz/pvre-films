@@ -98,18 +98,19 @@ function GalleryContent() {
           {images.map((image, index) => (
             <div
               key={image.id}
-              className="h-[calc(100vh-4rem)] lg:h-screen cursor-pointer group flex items-center justify-center"
+              className="relative h-[calc(100vh-4rem)] lg:h-screen cursor-pointer group"
               onClick={() => openLightbox(index)}
             >
-              <Image
-                src={getImageSrc(image)}
-                alt={image.title}
-                width={0}
-                height={0}
-                sizes="100vw"
-                className="max-w-full max-h-full w-auto h-auto object-contain transition-opacity duration-500 group-hover:opacity-90"
-                priority={index < 2}
-              />
+              <div className="absolute inset-4 lg:inset-8">
+                <Image
+                  src={getImageSrc(image)}
+                  alt={image.title}
+                  fill
+                  className="object-contain transition-opacity duration-500 group-hover:opacity-90"
+                  sizes="(max-width: 1024px) 100vw, calc(100vw - 280px)"
+                  priority={index < 2}
+                />
+              </div>
             </div>
           ))}
         </div>
