@@ -138,125 +138,180 @@ function HomeContent() {
 
         <div className="border-t border-zinc-900 my-12" />
 
-        {/* Category Cards or Filtered Images */}
-        {!categoryParam ? (
-          <section className="mb-12">
-            <h2 className="text-xl lg:text-2xl text-white font-light tracking-wide mb-8">
-              Photos
-            </h2>
-            {categories.length > 0 ? (
-              <div className="relative">
-                {/* Scroll buttons (show when more than 3 categories) */}
-                {categories.length > 3 && canScrollLeft && (
-                  <button
-                    onClick={() => scrollBy('left')}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2 transition-colors -ml-4"
-                    aria-label="Scroll left"
-                  >
-                    <ChevronLeft size={24} strokeWidth={1} />
-                  </button>
-                )}
-                {categories.length > 3 && canScrollRight && (
-                  <button
-                    onClick={() => scrollBy('right')}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2 transition-colors -mr-4"
-                    aria-label="Scroll right"
-                  >
-                    <ChevronRight size={24} strokeWidth={1} />
-                  </button>
-                )}
+        {/* Category Cards / Sub-category Cards / Filtered Images */}
+        {(() => {
+          const parentCategories = categories.filter((c: any) => !c.parent_id);
+          const currentCategory = categoryParam
+            ? categories.find((c: any) => c.slug === categoryParam)
+            : null;
+          const childCategories = currentCategory
+            ? categories.filter((c: any) => c.parent_id === currentCategory.id)
+            : [];
+          const isParentWithChildren = currentCategory && childCategories.length > 0;
+          const isLeafCategory = currentCategory && childCategories.length === 0;
 
-                <div
-                  ref={scrollRef}
-                  onScroll={updateScrollButtons}
-                  className={`flex gap-6 ${
-                    categories.length > 3
-                      ? 'overflow-x-auto scrollbar-hide'
-                      : 'flex-wrap'
-                  }`}
-                  style={categories.length > 3 ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : undefined}
-                >
-                  {categories.map((cat) => (
-                    <Link
-                      key={cat.id}
-                      href={`/?category=${cat.slug}`}
-                      className="group flex-shrink-0 w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
+          // Which cards to show in the slideshow
+          const cardsToShow = !categoryParam
+            ? parentCategories
+            : isParentWithChildren
+              ? childCategories
+              : [];
+
+          const showSlideshow = cardsToShow.length > 0;
+          const showImages = isLeafCategory;
+
+          return (
+            <>
+              {showSlideshow && (
+                <section className="mb-12">
+                  {currentCategory && (
+                    <div className="flex items-center gap-4 mb-8">
+                      <Link
+                        href={currentCategory.parent_id
+                          ? `/?category=${categories.find((c: any) => c.id === currentCategory.parent_id)?.slug}`
+                          : '/'}
+                        className="text-zinc-600 hover:text-white transition-colors text-sm"
+                      >
+                        &larr; Back
+                      </Link>
+                      <h2 className="text-xl lg:text-2xl text-white font-light tracking-wide">
+                        {currentCategory.name}
+                      </h2>
+                    </div>
+                  )}
+                  {!currentCategory && (
+                    <h2 className="text-xl lg:text-2xl text-white font-light tracking-wide mb-8">
+                      Photos
+                    </h2>
+                  )}
+                  <div className="relative">
+                    {cardsToShow.length > 3 && canScrollLeft && (
+                      <button
+                        onClick={() => scrollBy('left')}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2 transition-colors -ml-4"
+                        aria-label="Scroll left"
+                      >
+                        <ChevronLeft size={24} strokeWidth={1} />
+                      </button>
+                    )}
+                    {cardsToShow.length > 3 && canScrollRight && (
+                      <button
+                        onClick={() => scrollBy('right')}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2 transition-colors -mr-4"
+                        aria-label="Scroll right"
+                      >
+                        <ChevronRight size={24} strokeWidth={1} />
+                      </button>
+                    )}
+
+                    <div
+                      ref={scrollRef}
+                      onScroll={updateScrollButtons}
+                      className={`flex gap-6 ${
+                        cardsToShow.length > 3
+                          ? 'overflow-x-auto scrollbar-hide'
+                          : 'flex-wrap'
+                      }`}
+                      style={cardsToShow.length > 3 ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : undefined}
                     >
-                      <div className="relative aspect-[4/3] bg-zinc-900 overflow-hidden">
-                        {cat.cover_image ? (
-                          <Image
-                            src={cat.cover_image}
-                            alt={cat.name}
-                            fill
-                            className="object-cover transition-all duration-500 group-hover:scale-[1.03] group-hover:opacity-80"
-                            sizes="(max-width: 768px) 50vw, 33vw"
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-zinc-700 text-sm">No cover</span>
+                      {cardsToShow.map((cat) => (
+                        <Link
+                          key={cat.id}
+                          href={`/?category=${cat.slug}`}
+                          className="group flex-shrink-0 w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
+                        >
+                          <div className="relative aspect-[4/3] bg-zinc-900 overflow-hidden">
+                            {cat.cover_image ? (
+                              <Image
+                                src={cat.cover_image}
+                                alt={cat.name}
+                                fill
+                                className="object-cover transition-all duration-500 group-hover:scale-[1.03] group-hover:opacity-80"
+                                sizes="(max-width: 768px) 50vw, 33vw"
+                              />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-zinc-700 text-sm">No cover</span>
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                            <div className="absolute bottom-0 left-0 right-0 p-4">
+                              <h3 className="text-white text-sm font-medium">{cat.name}</h3>
+                              {cat.description && (
+                                <p className="text-zinc-400 text-xs mt-1 line-clamp-1">{cat.description}</p>
+                              )}
+                            </div>
                           </div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                        <div className="absolute bottom-0 left-0 right-0 p-4">
-                          <h3 className="text-white text-sm font-medium">{cat.name}</h3>
-                          {cat.description && (
-                            <p className="text-zinc-400 text-xs mt-1 line-clamp-1">{cat.description}</p>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-zinc-600 text-sm">No categories yet</p>
-                <p className="text-zinc-700 text-xs mt-2">Add categories in the admin panel</p>
-              </div>
-            )}
-          </section>
-        ) : (
-          <section className="mb-12">
-            <div className="flex items-center gap-4 mb-8">
-              <Link
-                href="/"
-                className="text-zinc-600 hover:text-white transition-colors text-sm"
-              >
-                &larr; All Categories
-              </Link>
-              <h2 className="text-xl lg:text-2xl text-white font-light tracking-wide">
-                {categories.find((c: any) => c.slug === categoryParam)?.name || 'Category'}
-              </h2>
-            </div>
-            {images.length > 0 ? (
-              <div className="columns-1 gap-3 lg:gap-4 max-w-5xl mx-auto">
-                {images.map((image, index) => (
-                  <div
-                    key={image.id}
-                    className="mb-3 lg:mb-4 break-inside-avoid group overflow-hidden bg-zinc-900 block cursor-pointer"
-                    onClick={() => {
-                      setCurrentImageIndex(index);
-                      setLightboxOpen(true);
-                    }}
-                  >
-                    <Image
-                      src={getImageSrc(image)}
-                      alt={image.title}
-                      width={0}
-                      height={0}
-                      sizes="100vw"
-                      className="w-full h-auto transition-all duration-500 group-hover:scale-[1.02] group-hover:opacity-90"
-                    />
+                        </Link>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <p className="text-zinc-600 text-sm">No images in this category</p>
-              </div>
-            )}
-          </section>
-        )}
+                </section>
+              )}
+
+              {showImages && (
+                <section className="mb-12">
+                  <div className="flex items-center gap-4 mb-8">
+                    <Link
+                      href={currentCategory.parent_id
+                        ? `/?category=${categories.find((c: any) => c.id === currentCategory.parent_id)?.slug}`
+                        : '/'}
+                      className="text-zinc-600 hover:text-white transition-colors text-sm"
+                    >
+                      &larr; Back
+                    </Link>
+                    <h2 className="text-xl lg:text-2xl text-white font-light tracking-wide">
+                      {currentCategory.name}
+                    </h2>
+                  </div>
+                  {images.length > 0 ? (
+                    <div className="columns-1 gap-3 lg:gap-4 max-w-5xl mx-auto">
+                      {images.map((image, index) => (
+                        <div
+                          key={image.id}
+                          className="mb-3 lg:mb-4 break-inside-avoid group overflow-hidden bg-zinc-900 block cursor-pointer"
+                          onClick={() => {
+                            setCurrentImageIndex(index);
+                            setLightboxOpen(true);
+                          }}
+                        >
+                          <Image
+                            src={getImageSrc(image)}
+                            alt={image.title}
+                            width={0}
+                            height={0}
+                            sizes="100vw"
+                            className="w-full h-auto transition-all duration-500 group-hover:scale-[1.02] group-hover:opacity-90"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <p className="text-zinc-600 text-sm">No images in this category</p>
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {!showSlideshow && !showImages && categoryParam && (
+                <div className="text-center py-12">
+                  <p className="text-zinc-600 text-sm">Category not found</p>
+                  <Link href="/" className="text-zinc-500 hover:text-white text-sm mt-2 inline-block">
+                    &larr; Back to all categories
+                  </Link>
+                </div>
+              )}
+
+              {!categoryParam && parentCategories.length === 0 && (
+                <div className="text-center py-12 mb-12">
+                  <p className="text-zinc-600 text-sm">No categories yet</p>
+                  <p className="text-zinc-700 text-xs mt-2">Add categories in the admin panel</p>
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {/* Divider before Videos */}
         {videos.length > 0 && (
