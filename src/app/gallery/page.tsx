@@ -86,35 +86,33 @@ function GalleryContent() {
         </div>
       )}
 
-      {/* Gallery Grid */}
-      <div className="p-6 lg:p-12">
-        {images.length === 0 ? (
-          <div className="min-h-[60vh] flex items-center justify-center">
-            <div className="text-center">
-              <p className="text-zinc-600 text-sm">No images in this category</p>
+      {/* Gallery */}
+      {images.length === 0 ? (
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-zinc-600 text-sm">No images in this category</p>
+          </div>
+        </div>
+      ) : (
+        <div>
+          {images.map((image, index) => (
+            <div
+              key={image.id}
+              className="relative h-[calc(100vh-4rem)] lg:h-screen cursor-pointer group flex items-center justify-center p-4"
+              onClick={() => openLightbox(index)}
+            >
+              <Image
+                src={getImageSrc(image)}
+                alt={image.title}
+                fill
+                className="object-contain transition-opacity duration-500 group-hover:opacity-90 p-4"
+                sizes="100vw"
+                priority={index < 2}
+              />
             </div>
-          </div>
-        ) : (
-          <div className="max-w-4xl mx-auto space-y-8 lg:space-y-12">
-            {images.map((image, index) => (
-              <div
-                key={image.id}
-                className="cursor-pointer group"
-                onClick={() => openLightbox(index)}
-              >
-                <Image
-                  src={getImageSrc(image)}
-                  alt={image.title}
-                  width={0}
-                  height={0}
-                  sizes="(max-width: 1024px) 100vw, 896px"
-                  className="w-full h-auto transition-opacity duration-500 group-hover:opacity-90"
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Lightbox */}
       {lightboxOpen && images.length > 0 && (
