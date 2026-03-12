@@ -174,11 +174,11 @@ function SidebarContent() {
                             <span className="w-[22px]" />
                           )}
                           <Link
-                            href={`/gallery?category=${parent.slug}`}
+                            href={`/gallery?category=${encodeURIComponent(parent.slug.trim())}`}
                             onClick={closeMobileMenu}
                             className={`
                               block text-sm py-1 transition-colors duration-200
-                              ${categoryParam === parent.slug ? 'text-white' : 'text-zinc-500 hover:text-white'}
+                              ${categoryParam === parent.slug.trim() ? 'text-white' : 'text-zinc-500 hover:text-white'}
                             `}
                           >
                             {parent.name}{' '}
@@ -190,11 +190,11 @@ function SidebarContent() {
                             {children.map((child) => (
                               <Link
                                 key={child.id}
-                                href={`/gallery?category=${child.slug}`}
+                                href={`/gallery?category=${encodeURIComponent(child.slug.trim())}`}
                                 onClick={closeMobileMenu}
                                 className={`
                                   block text-sm py-1 pl-2 border-l border-zinc-800 transition-colors duration-200
-                                  ${categoryParam === child.slug ? 'text-white' : 'text-zinc-500 hover:text-white'}
+                                  ${categoryParam === child.slug.trim() ? 'text-white' : 'text-zinc-500 hover:text-white'}
                                 `}
                               >
                                 {child.name}{' '}

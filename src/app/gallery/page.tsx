@@ -62,7 +62,7 @@ function GalleryContent() {
     if (categories.length === 0) return;
 
     setLoading(true);
-    const category = categories.find((c) => c.slug === categoryParam);
+    const category = categories.find((c) => c.slug.trim() === categoryParam?.trim());
     setCurrentCategory(category || null);
 
     if (!category) {
@@ -180,7 +180,7 @@ function GalleryContent() {
               {childCategories.map((cat) => (
                 <Link
                   key={cat.id}
-                  href={`/gallery?category=${cat.slug}`}
+                  href={`/gallery?category=${encodeURIComponent(cat.slug.trim())}`}
                   className="group flex-shrink-0 w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
                 >
                   <div className="relative aspect-[4/3] bg-zinc-900 overflow-hidden">
