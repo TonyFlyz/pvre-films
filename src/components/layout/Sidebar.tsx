@@ -174,7 +174,7 @@ function SidebarContent() {
                             <span className="w-[22px]" />
                           )}
                           <Link
-                            href={`/?category=${parent.slug}`}
+                            href={`/gallery?category=${parent.slug}`}
                             onClick={closeMobileMenu}
                             className={`
                               block text-sm py-1 transition-colors duration-200
@@ -190,7 +190,7 @@ function SidebarContent() {
                             {children.map((child) => (
                               <Link
                                 key={child.id}
-                                href={`/?category=${child.slug}`}
+                                href={`/gallery?category=${child.slug}`}
                                 onClick={closeMobileMenu}
                                 className={`
                                   block text-sm py-1 pl-2 border-l border-zinc-800 transition-colors duration-200
