@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getImages, createImage } from '@/lib/supabase';
 import { verifyAuth, isAdmin } from '@/lib/auth';
 
+
 // GET all images
 export async function GET(request: NextRequest) {
   try {
@@ -9,12 +10,8 @@ export async function GET(request: NextRequest) {
     const categoryId = searchParams.get('categoryId');
     const featured = searchParams.get('featured');
 
-    // Check if user is admin
-    const auth = await verifyAuth();
-    const userIsAdmin = isAdmin(auth);
-
-    // Only show featured images if not admin or if explicitly requested
-    const featuredOnly = featured === 'true' || !userIsAdmin;
+    // Only filter by featured if explicitly requested
+    const featuredOnly = featured === 'true';
 
     // Get images from Supabase
     const images = await getImages(
