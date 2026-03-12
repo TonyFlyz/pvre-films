@@ -70,7 +70,7 @@ export async function getCategories() {
   const { data, error } = await supabaseAdmin
     .from('categories')
     .select('*')
-    .order('name', { ascending: true })
+    .order('display_order', { ascending: true })
 
   if (error) throw error
   return data as Category[]

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Plus, Edit2, Trash2, X, Upload } from 'lucide-react';
+import { ArrowLeft, Plus, Edit2, Trash2, X, Upload, GripVertical } from 'lucide-react';
 
 interface Category {
   id: string;
@@ -31,6 +31,9 @@ export default function AdminCategoriesPage() {
     cover_image: '',
     display_order: 0,
   });
+
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCategories();
@@ -165,6 +168,53 @@ export default function AdminCategoriesPage() {
       console.error('Delete error:', error);
       alert('Failed to delete category');
     }
+  };
+
+  const handleDragStart = (id: string) => {
+    setDraggedId(id);
+  };
+
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    if (id !== draggedId) {
+      setDragOverId(id);
+    }
+  };
+
+  const handleDrop = async (targetId: string) => {
+    if (!draggedId || draggedId === targetId) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    const oldIndex = categories.findIndex((c) => c.id === draggedId);
+    const newIndex = categories.findIndex((c) => c.id === targetId);
+
+    const reordered = [...categories];
+    const [moved] = reordered.splice(oldIndex, 1);
+    reordered.splice(newIndex, 0, moved);
+
+    setCategories(reordered);
+    setDraggedId(null);
+    setDragOverId(null);
+
+    try {
+      await fetch('/api/categories/reorder', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderedIds: reordered.map((c) => c.id) }),
+      });
+      window.dispatchEvent(new Event('sidebarRefresh'));
+    } catch (error) {
+      console.error('Reorder error:', error);
+      await fetchCategories();
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
   };
 
   const resetForm = () => {
@@ -352,9 +402,23 @@ export default function AdminCategoriesPage() {
               {categories.map((category) => (
                 <div
                   key={category.id}
-                  className="flex items-center justify-between p-4 border border-zinc-900 hover:border-zinc-800 transition-colors"
+                  draggable
+                  onDragStart={() => handleDragStart(category.id)}
+                  onDragOver={(e) => handleDragOver(e, category.id)}
+                  onDrop={() => handleDrop(category.id)}
+                  onDragEnd={handleDragEnd}
+                  className={`flex items-center justify-between p-4 border transition-colors cursor-grab active:cursor-grabbing ${
+                    dragOverId === category.id
+                      ? 'border-white bg-zinc-900/50'
+                      : draggedId === category.id
+                        ? 'border-zinc-700 opacity-50'
+                        : 'border-zinc-900 hover:border-zinc-800'
+                  }`}
                 >
                   <div className="flex items-center gap-4">
+                    <div className="text-zinc-700 flex-shrink-0">
+                      <GripVertical size={16} />
+                    </div>
                     {category.cover_image && (
                       <div className="relative w-12 h-12 bg-zinc-900 flex-shrink-0">
                         <Image
