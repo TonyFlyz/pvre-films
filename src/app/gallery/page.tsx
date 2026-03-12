@@ -95,11 +95,11 @@ function GalleryContent() {
             </div>
           </div>
         ) : (
-          <div className="columns-2 lg:columns-3 gap-3 lg:gap-4">
+          <div className="max-w-4xl mx-auto space-y-8 lg:space-y-12">
             {images.map((image, index) => (
               <div
                 key={image.id}
-                className="mb-3 lg:mb-4 break-inside-avoid cursor-pointer group overflow-hidden bg-zinc-900"
+                className="cursor-pointer group"
                 onClick={() => openLightbox(index)}
               >
                 <Image
@@ -107,8 +107,8 @@ function GalleryContent() {
                   alt={image.title}
                   width={0}
                   height={0}
-                  sizes="(max-width: 768px) 50vw, 33vw"
-                  className="w-full h-auto transition-all duration-500 group-hover:scale-[1.02] group-hover:opacity-90"
+                  sizes="(max-width: 1024px) 100vw, 896px"
+                  className="w-full h-auto transition-opacity duration-500 group-hover:opacity-90"
                 />
               </div>
             ))}
