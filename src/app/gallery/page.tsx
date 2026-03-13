@@ -59,9 +59,29 @@ function GalleryContent() {
   }, []);
 
   useEffect(() => {
-    if (categories.length === 0) return;
+    if (categories.length === 0 && categoryParam) return;
 
     setLoading(true);
+
+    // No category param — show all images
+    if (!categoryParam) {
+      setCurrentCategory(null);
+      fetch('/api/images')
+        .then((res) => res.json())
+        .then((data) => {
+          setImages(Array.isArray(data) ? data : []);
+          setLoading(false);
+        })
+        .catch((error) => {
+          console.error('Error fetching images:', error);
+          setImages([]);
+          setLoading(false);
+        });
+      return;
+    }
+
+    if (categories.length === 0) return;
+
     const category = categories.find((c) => c.slug.trim() === categoryParam?.trim());
     setCurrentCategory(category || null);
 
@@ -115,7 +135,10 @@ function GalleryContent() {
     );
   }
 
-  if (!currentCategory) {
+  // "All Images" mode (no category selected)
+  const isAllImages = !currentCategory && !categoryParam;
+
+  if (!currentCategory && categoryParam) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black">
         <div className="text-center">
@@ -129,7 +152,9 @@ function GalleryContent() {
   }
 
   // Determine if this is a parent (has children) or leaf category
-  const childCategories = categories.filter((c) => c.parent_id === currentCategory.id);
+  const childCategories = currentCategory
+    ? categories.filter((c) => c.parent_id === currentCategory.id)
+    : [];
   const isParent = childCategories.length > 0;
 
   return (
@@ -138,9 +163,9 @@ function GalleryContent() {
         {/* Category Title */}
         <div className="mb-8">
           <h1 className="text-2xl lg:text-3xl font-light text-white tracking-wide">
-            {currentCategory.name}
+            {isAllImages ? 'All Images' : currentCategory?.name}
           </h1>
-          {currentCategory.description && (
+          {currentCategory?.description && (
             <p className="text-zinc-500 text-sm mt-2">{currentCategory.description}</p>
           )}
         </div>

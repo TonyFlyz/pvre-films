@@ -209,11 +209,11 @@ function SidebarContent() {
                 })()
               )}
               <Link
-                href="/"
+                href="/gallery"
                 onClick={closeMobileMenu}
                 className={`
                   block text-sm py-1 ml-[22px] transition-colors duration-200
-                  ${pathname === '/' && !categoryParam ? 'text-white' : 'text-zinc-500 hover:text-white'}
+                  ${pathname === '/gallery' && !categoryParam ? 'text-white' : 'text-zinc-500 hover:text-white'}
                 `}
               >
                 All Images
