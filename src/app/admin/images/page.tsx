@@ -90,9 +90,9 @@ export default function AdminImagesPage() {
       return;
     }
 
-    const maxSize = isHEIC ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+    const maxSize = 15 * 1024 * 1024;
     if (file.size > maxSize) {
-      setUploadError(`Image size must be less than ${isHEIC ? '10MB' : '5MB'}`);
+      setUploadError('Image size must be less than 15MB');
       return;
     }
 
@@ -286,7 +286,7 @@ export default function AdminImagesPage() {
                      file.type === 'image/heic' ||
                      file.type === 'image/heif';
 
-      const maxSize = isHEIC ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+      const maxSize = 15 * 1024 * 1024;
       if (file.size > maxSize) {
         // Add as failed so user sees which files were rejected
         newFiles.push({
@@ -294,7 +294,7 @@ export default function AdminImagesPage() {
           file,
           preview: URL.createObjectURL(file),
           status: 'failed',
-          error: `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB, max ${isHEIC ? '10MB' : '5MB'})`,
+          error: `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB, max 15MB)`,
         });
         return;
       }
@@ -539,7 +539,7 @@ export default function AdminImagesPage() {
                       <>
                         <Upload size={32} className="text-zinc-700 mb-2" />
                         <p className="text-zinc-600 text-sm">Click to upload</p>
-                        <p className="text-zinc-700 text-xs mt-1">PNG, JPG, HEIC up to 10MB</p>
+                        <p className="text-zinc-700 text-xs mt-1">PNG, JPG, HEIC up to 15MB</p>
                       </>
                     )}
                   </label>
@@ -675,7 +675,7 @@ export default function AdminImagesPage() {
                   {isDragActive ? 'Drop images here' : 'Drag & drop images, or click to select'}
                 </p>
                 <p className="text-zinc-700 text-xs mt-1">
-                  PNG, JPG, HEIC up to 10MB each — max 50 files
+                  PNG, JPG, HEIC up to 15MB each — max 50 files
                 </p>
               </div>
 

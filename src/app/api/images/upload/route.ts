@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createImage, getImages, uploadImageToStorage } from '@/lib/supabase';
 import { verifyAuth, isAdmin } from '@/lib/auth';
 
+// Allow longer execution time for file uploads
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   const auth = await verifyAuth();
   if (!isAdmin(auth)) {
@@ -32,10 +35,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
+    // Validate file size (max 15MB)
+    if (file.size > 15 * 1024 * 1024) {
       return NextResponse.json(
-        { error: 'File size must be less than 10MB' },
+        { error: 'File size must be less than 15MB' },
         { status: 400 }
       );
     }
