@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import ViewControl from '@/components/ui/ViewControl';
 
 interface Video {
   id: string;
@@ -31,6 +32,7 @@ function HomeContent() {
   const [settings, setSettings] = useState<Settings>({});
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewColumns, setViewColumns] = useState(1);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -130,68 +132,108 @@ function HomeContent() {
             <h2 className="text-xl lg:text-2xl text-white font-light tracking-wide mb-8">
               Photos
             </h2>
-            <div className="relative">
-              {parentCategories.length > 3 && canScrollLeft && (
-                <button
-                  onClick={() => scrollBy('left')}
-                  className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2 transition-colors -ml-4"
-                  aria-label="Scroll left"
-                >
-                  <ChevronLeft size={24} strokeWidth={1} />
-                </button>
-              )}
-              {parentCategories.length > 3 && canScrollRight && (
-                <button
-                  onClick={() => scrollBy('right')}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2 transition-colors -mr-4"
-                  aria-label="Scroll right"
-                >
-                  <ChevronRight size={24} strokeWidth={1} />
-                </button>
-              )}
+            <ViewControl columns={viewColumns} onChange={setViewColumns} />
+            {viewColumns === 1 ? (
+              <div className="relative">
+                {parentCategories.length > 3 && canScrollLeft && (
+                  <button
+                    onClick={() => scrollBy('left')}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2 transition-colors -ml-4"
+                    aria-label="Scroll left"
+                  >
+                    <ChevronLeft size={24} strokeWidth={1} />
+                  </button>
+                )}
+                {parentCategories.length > 3 && canScrollRight && (
+                  <button
+                    onClick={() => scrollBy('right')}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2 transition-colors -mr-4"
+                    aria-label="Scroll right"
+                  >
+                    <ChevronRight size={24} strokeWidth={1} />
+                  </button>
+                )}
 
+                <div
+                  ref={scrollRef}
+                  onScroll={updateScrollButtons}
+                  className={`flex gap-6 ${
+                    parentCategories.length > 3
+                      ? 'overflow-x-auto scrollbar-hide'
+                      : 'flex-wrap'
+                  }`}
+                  style={parentCategories.length > 3 ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : undefined}
+                >
+                  {parentCategories.map((cat) => (
+                    <Link
+                      key={cat.id}
+                      href={`/gallery?category=${encodeURIComponent(cat.slug.trim())}`}
+                      className="group flex-shrink-0 w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
+                    >
+                      <div className="relative aspect-[4/3] bg-zinc-900 overflow-hidden">
+                        {cat.cover_image ? (
+                          <Image
+                            src={cat.cover_image}
+                            alt={cat.name}
+                            fill
+                            className="object-cover transition-all duration-500 group-hover:scale-[1.03] group-hover:opacity-80"
+                            sizes="(max-width: 768px) 50vw, 33vw"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-zinc-700 text-sm">No cover</span>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        <div className="absolute bottom-0 left-0 right-0 p-4">
+                          <h3 className="text-white text-sm font-medium">{cat.name}</h3>
+                          {cat.description && (
+                            <p className="text-zinc-400 text-xs mt-1 line-clamp-1">{cat.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ) : (
               <div
-                ref={scrollRef}
-                onScroll={updateScrollButtons}
-                className={`flex gap-6 ${
-                  parentCategories.length > 3
-                    ? 'overflow-x-auto scrollbar-hide'
-                    : 'flex-wrap'
-                }`}
-                style={parentCategories.length > 3 ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : undefined}
+                className="grid gap-1"
+                style={{ gridTemplateColumns: `repeat(${viewColumns}, 1fr)` }}
               >
                 {parentCategories.map((cat) => (
                   <Link
                     key={cat.id}
                     href={`/gallery?category=${encodeURIComponent(cat.slug.trim())}`}
-                    className="group flex-shrink-0 w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
+                    className="group"
                   >
-                    <div className="relative aspect-[4/3] bg-zinc-900 overflow-hidden">
+                    <div className="relative aspect-square bg-zinc-900 overflow-hidden">
                       {cat.cover_image ? (
                         <Image
                           src={cat.cover_image}
                           alt={cat.name}
                           fill
-                          className="object-cover transition-all duration-500 group-hover:scale-[1.03] group-hover:opacity-80"
-                          sizes="(max-width: 768px) 50vw, 33vw"
+                          className="object-cover transition-all duration-300 group-hover:opacity-80"
+                          sizes={`${Math.round(100 / viewColumns)}vw`}
                         />
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center">
                           <span className="text-zinc-700 text-sm">No cover</span>
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 p-4">
-                        <h3 className="text-white text-sm font-medium">{cat.name}</h3>
-                        {cat.description && (
-                          <p className="text-zinc-400 text-xs mt-1 line-clamp-1">{cat.description}</p>
-                        )}
-                      </div>
+                      {viewColumns <= 10 && (
+                        <>
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                          <div className="absolute bottom-0 left-0 right-0 p-2">
+                            <h3 className="text-white text-xs font-medium truncate">{cat.name}</h3>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </Link>
                 ))}
               </div>
-            </div>
+            )}
           </section>
         ) : (
           <div className="text-center py-12 mb-12">

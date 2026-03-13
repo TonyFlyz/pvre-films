@@ -7,6 +7,7 @@ import { Upload, X, Trash2, Eye, EyeOff, ArrowLeft, CheckCircle, AlertCircle, Lo
 import Link from 'next/link';
 import { useDropzone } from 'react-dropzone';
 import { Image as ImageType, Category } from '@/types';
+import ViewControl from '@/components/ui/ViewControl';
 
 export default function AdminImagesPage() {
   const router = useRouter();
@@ -43,6 +44,8 @@ export default function AdminImagesPage() {
   const [bulkFolder, setBulkFolder] = useState('');
   const [bulkUploading, setBulkUploading] = useState(false);
   const [bulkProgress, setBulkProgress] = useState({ done: 0, total: 0 });
+
+  const [viewColumns, setViewColumns] = useState(5);
 
   // Drag reorder state
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
@@ -855,12 +858,16 @@ export default function AdminImagesPage() {
         </div>
 
         {/* Images Grid */}
+        <ViewControl columns={viewColumns} onChange={setViewColumns} />
         {filteredImages.length === 0 ? (
           <div className="text-center py-12 text-zinc-600 text-sm">
             No images found. Upload your first image to get started.
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div
+            className="grid gap-1"
+            style={{ gridTemplateColumns: `repeat(${viewColumns}, 1fr)` }}
+          >
             {filteredImages.map((image) => (
               <div
                 key={image.id}
@@ -877,23 +884,26 @@ export default function AdminImagesPage() {
                       : ''
                 }`}
               >
-                <div className="relative aspect-square bg-zinc-900 overflow-hidden mb-2">
+                <div className={`relative aspect-square bg-zinc-900 overflow-hidden ${viewColumns <= 5 ? 'mb-2' : ''}`}>
                   <Image
                     src={getImageSrc(image)}
                     alt={image.title}
                     fill
                     className="object-cover"
-                    sizes="(max-width: 768px) 50vw, 25vw"
+                    sizes={`${Math.round(100 / viewColumns)}vw`}
                   />
-                  {!image.isPublished && (
+                  {!image.isPublished && viewColumns <= 10 && (
                     <div className="absolute top-2 left-2 px-2 py-1 bg-black/80 text-zinc-400 text-xs">
                       Draft
                     </div>
                   )}
-                  <div className="absolute top-2 right-2 text-white/60 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <GripVertical size={16} />
-                  </div>
+                  {viewColumns <= 10 && (
+                    <div className="absolute top-2 right-2 text-white/60 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <GripVertical size={16} />
+                    </div>
+                  )}
                 </div>
+                {viewColumns <= 5 && (
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white truncate">{image.title}</p>
@@ -918,6 +928,7 @@ export default function AdminImagesPage() {
                     </button>
                   </div>
                 </div>
+                )}
               </div>
             ))}
           </div>

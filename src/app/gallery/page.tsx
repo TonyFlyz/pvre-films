@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Image as ImageType } from '@/types';
 import ImageLightbox from '@/components/ui/ImageLightbox';
+import ViewControl from '@/components/ui/ViewControl';
 
 interface CategoryData {
   id: string;
@@ -27,6 +28,7 @@ function GalleryContent() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [viewColumns, setViewColumns] = useState(1);
 
   // Scroll state for sub-category carousel
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -117,6 +119,13 @@ function GalleryContent() {
   useEffect(() => {
     updateScrollButtons();
   }, [currentCategory, categories]);
+
+  // Default to 5 columns for "All Images" (too many for full-bleed)
+  useEffect(() => {
+    if (!loading && !categoryParam && images.length > 20) {
+      setViewColumns(5);
+    }
+  }, [loading, categoryParam, images.length]);
 
   const openLightbox = (index: number) => {
     setCurrentImageIndex(index);
@@ -246,26 +255,50 @@ function GalleryContent() {
                 <p className="text-zinc-600 text-sm mb-6">
                   {images.length} {images.length === 1 ? 'image' : 'images'}
                 </p>
-                <div className="-mx-6 lg:-mx-12">
-                  {images.map((image, index) => (
-                    <div
-                      key={image.id}
-                      className="relative h-[80vh] lg:h-screen cursor-pointer group bg-black"
-                      onClick={() => openLightbox(index)}
-                    >
-                      <div className="absolute inset-0 bg-black">
+                <ViewControl columns={viewColumns} onChange={setViewColumns} />
+                {viewColumns === 1 ? (
+                  <div className="-mx-6 lg:-mx-12">
+                    {images.map((image, index) => (
+                      <div
+                        key={image.id}
+                        className="relative h-[80vh] lg:h-screen cursor-pointer group bg-black"
+                        onClick={() => openLightbox(index)}
+                      >
+                        <div className="absolute inset-0 bg-black">
+                          <Image
+                            src={getImageSrc(image)}
+                            alt={image.title}
+                            fill
+                            className="object-contain transition-opacity duration-500 group-hover:opacity-90"
+                            sizes="100vw"
+                            priority={index < 2}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div
+                    className="grid gap-1"
+                    style={{ gridTemplateColumns: `repeat(${viewColumns}, 1fr)` }}
+                  >
+                    {images.map((image, index) => (
+                      <div
+                        key={image.id}
+                        className="relative aspect-square bg-zinc-950 cursor-pointer group overflow-hidden"
+                        onClick={() => openLightbox(index)}
+                      >
                         <Image
                           src={getImageSrc(image)}
                           alt={image.title}
                           fill
-                          className="object-contain transition-opacity duration-500 group-hover:opacity-90"
-                          sizes="(max-width: 1024px) 100vw, calc(100vw - 280px)"
-                          priority={index < 2}
+                          className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                          sizes={`${Math.round(100 / viewColumns)}vw`}
                         />
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </>
             )}
           </>
