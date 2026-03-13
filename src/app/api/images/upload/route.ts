@@ -28,7 +28,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    const isImage = file.type.startsWith('image/') ||
+      file.name.toLowerCase().endsWith('.tif') ||
+      file.name.toLowerCase().endsWith('.tiff');
+    if (!isImage) {
       return NextResponse.json(
         { error: 'File must be an image' },
         { status: 400 }

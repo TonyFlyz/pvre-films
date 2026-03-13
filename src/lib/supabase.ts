@@ -10,7 +10,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 // Admin client with service role key for server-side operations (bypasses RLS)
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
-// Helper function to upload image to Supabase Storage
+// Helper function to upload image to Supabase Storage (server-side, used as fallback)
 export async function uploadImageToStorage(file: Buffer, path: string, contentType: string) {
   const { data, error } = await supabaseAdmin.storage
     .from('images')
@@ -28,6 +28,26 @@ export async function uploadImageToStorage(file: Buffer, path: string, contentTy
     .getPublicUrl(path)
 
   return { data, publicUrl }
+}
+
+// Create a signed upload URL for direct browser-to-Supabase uploads
+export async function createSignedUploadUrl(path: string) {
+  const { data, error } = await supabaseAdmin.storage
+    .from('images')
+    .createSignedUploadUrl(path)
+
+  if (error) throw error
+
+  return { signedUrl: data.signedUrl, token: data.token, path }
+}
+
+// Get the public URL for a storage path
+export function getStoragePublicUrl(path: string) {
+  const { data: { publicUrl } } = supabaseAdmin.storage
+    .from('images')
+    .getPublicUrl(path)
+
+  return publicUrl
 }
 
 // Helper function to delete image from Supabase Storage

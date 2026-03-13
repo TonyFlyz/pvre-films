@@ -76,16 +76,87 @@ export default function AdminImagesPage() {
     }
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const isImageFile = (file: File) => {
     const isHEIC = file.name.toLowerCase().endsWith('.heic') ||
                    file.name.toLowerCase().endsWith('.heif') ||
                    file.type === 'image/heic' ||
                    file.type === 'image/heif';
+    const isTIFF = file.name.toLowerCase().endsWith('.tif') ||
+                   file.name.toLowerCase().endsWith('.tiff') ||
+                   file.type === 'image/tiff';
+    return file.type.startsWith('image/') || isHEIC || isTIFF;
+  };
 
-    if (!file.type.startsWith('image/') && !isHEIC) {
+  const isHEICFile = (file: File) => {
+    return file.name.toLowerCase().endsWith('.heic') ||
+           file.name.toLowerCase().endsWith('.heif') ||
+           file.type === 'image/heic' ||
+           file.type === 'image/heif';
+  };
+
+  // Upload a single file directly to Supabase via signed URL
+  const directUpload = async (file: File, metadata: {
+    title: string;
+    description?: string;
+    categoryId: string;
+    isFeatured: boolean;
+    folder?: string;
+  }) => {
+    // Step 1: Get signed upload URL from our API
+    const signedUrlRes = await fetch('/api/images/signed-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: file.name,
+        contentType: file.type,
+        folder: metadata.folder,
+      }),
+    });
+
+    if (!signedUrlRes.ok) {
+      const err = await signedUrlRes.json();
+      throw new Error(err.error || 'Failed to get upload URL');
+    }
+
+    const { signedUrl, path } = await signedUrlRes.json();
+
+    // Step 2: Upload file directly to Supabase Storage
+    const uploadRes = await fetch(signedUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type },
+      body: file,
+    });
+
+    if (!uploadRes.ok) {
+      throw new Error('Failed to upload file to storage');
+    }
+
+    // Step 3: Confirm upload and create DB record
+    const confirmRes = await fetch('/api/images/confirm-upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        path,
+        title: metadata.title,
+        description: metadata.description || '',
+        categoryId: metadata.categoryId,
+        isFeatured: metadata.isFeatured,
+      }),
+    });
+
+    if (!confirmRes.ok) {
+      const err = await confirmRes.json();
+      throw new Error(err.error || 'Failed to confirm upload');
+    }
+
+    return confirmRes.json();
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!isImageFile(file)) {
       setUploadError('Please select an image file');
       return;
     }
@@ -98,7 +169,7 @@ export default function AdminImagesPage() {
 
     setUploadError('');
 
-    if (isHEIC) {
+    if (isHEICFile(file)) {
       try {
         setUploadError('Converting HEIC image...');
         const heic2any = (await import('heic2any')).default;
@@ -144,33 +215,21 @@ export default function AdminImagesPage() {
     setUploadError('');
 
     try {
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-      formData.append('title', uploadData.title);
-      formData.append('description', uploadData.description);
-      formData.append('categoryId', uploadData.categoryId);
-      formData.append('isPublished', String(uploadData.isPublished));
-
-      const response = await fetch('/api/images/upload', {
-        method: 'POST',
-        body: formData,
+      await directUpload(selectedFile, {
+        title: uploadData.title,
+        description: uploadData.description,
+        categoryId: uploadData.categoryId,
+        isFeatured: uploadData.isPublished,
       });
 
-      const result = await response.json();
-
-      if (response.ok) {
-        setUploadData({ title: '', description: '', categoryId: '', isPublished: true });
-        setSelectedFile(null);
-        setPreviewUrl(null);
-        setShowUploadForm(false);
-        await fetchData();
-        // Refresh sidebar counts
-        window.dispatchEvent(new Event('sidebarRefresh'));
-      } else {
-        setUploadError(result.error || 'Upload failed');
-      }
+      setUploadData({ title: '', description: '', categoryId: '', isPublished: true });
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      setShowUploadForm(false);
+      await fetchData();
+      window.dispatchEvent(new Event('sidebarRefresh'));
     } catch (error) {
-      setUploadError('Failed to upload image');
+      setUploadError(error instanceof Error ? error.message : 'Failed to upload image');
       console.error('Upload error:', error);
     } finally {
       setUploading(false);
@@ -281,11 +340,6 @@ export default function AdminImagesPage() {
     const newFiles: BulkFile[] = [];
 
     filesToAdd.forEach((file) => {
-      const isHEIC = file.name.toLowerCase().endsWith('.heic') ||
-                     file.name.toLowerCase().endsWith('.heif') ||
-                     file.type === 'image/heic' ||
-                     file.type === 'image/heif';
-
       const maxSize = 15 * 1024 * 1024;
       if (file.size > maxSize) {
         // Add as failed so user sees which files were rejected
@@ -341,63 +395,57 @@ export default function AdminImagesPage() {
     setBulkProgress({ done: 0, total });
     let processed = 0;
 
-    for (let i = 0; i < bulkFiles.length; i++) {
-      const bf = bulkFiles[i];
-      if (bf.status === 'done') continue; // skip already uploaded
+    // Process files with concurrency limit of 3
+    const CONCURRENCY = 3;
+    const queue = [...toProcess];
 
-      // Mark as uploading
+    const processOne = async (bf: BulkFile) => {
       setBulkFiles((prev) =>
         prev.map((f) => (f.id === bf.id ? { ...f, status: 'uploading' as const, error: undefined } : f))
       );
 
       try {
         let fileToUpload = bf.file;
-        const isHEIC = bf.file.name.toLowerCase().endsWith('.heic') ||
-                       bf.file.name.toLowerCase().endsWith('.heif') ||
-                       bf.file.type === 'image/heic' ||
-                       bf.file.type === 'image/heif';
-
-        if (isHEIC) {
+        if (isHEICFile(bf.file)) {
           fileToUpload = await convertHEIC(bf.file);
         }
 
-        const formData = new FormData();
-        formData.append('file', fileToUpload);
-        formData.append('title', generateTitle(bf.file.name));
-        formData.append('categoryId', bulkCategory);
-        formData.append('isPublished', 'true');
-        if (bulkFolder.trim()) {
-          formData.append('folder', bulkFolder.trim());
-        }
-
-        const response = await fetch('/api/images/upload', {
-          method: 'POST',
-          body: formData,
+        await directUpload(fileToUpload, {
+          title: generateTitle(bf.file.name),
+          categoryId: bulkCategory,
+          isFeatured: true,
+          folder: bulkFolder.trim() || undefined,
         });
 
-        if (response.ok) {
-          setBulkFiles((prev) =>
-            prev.map((f) => (f.id === bf.id ? { ...f, status: 'done' as const } : f))
-          );
-        } else {
-          const result = await response.json();
-          setBulkFiles((prev) =>
-            prev.map((f) =>
-              f.id === bf.id ? { ...f, status: 'failed' as const, error: result.error || 'Upload failed' } : f
-            )
-          );
-        }
+        setBulkFiles((prev) =>
+          prev.map((f) => (f.id === bf.id ? { ...f, status: 'done' as const } : f))
+        );
       } catch (error) {
         setBulkFiles((prev) =>
           prev.map((f) =>
-            f.id === bf.id ? { ...f, status: 'failed' as const, error: 'Network error' } : f
+            f.id === bf.id
+              ? { ...f, status: 'failed' as const, error: error instanceof Error ? error.message : 'Upload failed' }
+              : f
           )
         );
       }
 
       processed++;
       setBulkProgress({ done: processed, total });
+    };
+
+    // Run with concurrency pool
+    const executing: Promise<void>[] = [];
+    for (const bf of queue) {
+      const p = processOne(bf).then(() => {
+        executing.splice(executing.indexOf(p), 1);
+      });
+      executing.push(p);
+      if (executing.length >= CONCURRENCY) {
+        await Promise.race(executing);
+      }
     }
+    await Promise.all(executing);
 
     setBulkUploading(false);
     await fetchData();
@@ -411,6 +459,7 @@ export default function AdminImagesPage() {
       'image/png': ['.png'],
       'image/heic': ['.heic'],
       'image/heif': ['.heif'],
+      'image/tiff': ['.tif', '.tiff'],
     },
     disabled: bulkUploading,
   });
@@ -514,7 +563,7 @@ export default function AdminImagesPage() {
                 <div className="border border-dashed border-zinc-800 p-8 text-center hover:border-zinc-600 transition-colors">
                   <input
                     type="file"
-                    accept="image/*,.heic,.heif"
+                    accept="image/*,.heic,.heif,.tif,.tiff"
                     onChange={handleFileSelect}
                     className="hidden"
                     id="file-upload"
@@ -539,7 +588,7 @@ export default function AdminImagesPage() {
                       <>
                         <Upload size={32} className="text-zinc-700 mb-2" />
                         <p className="text-zinc-600 text-sm">Click to upload</p>
-                        <p className="text-zinc-700 text-xs mt-1">PNG, JPG, HEIC up to 15MB</p>
+                        <p className="text-zinc-700 text-xs mt-1">PNG, JPG, HEIC, TIF up to 15MB</p>
                       </>
                     )}
                   </label>
@@ -675,7 +724,7 @@ export default function AdminImagesPage() {
                   {isDragActive ? 'Drop images here' : 'Drag & drop images, or click to select'}
                 </p>
                 <p className="text-zinc-700 text-xs mt-1">
-                  PNG, JPG, HEIC up to 15MB each — max 50 files
+                  PNG, JPG, HEIC, TIF up to 15MB each — max 50 files
                 </p>
               </div>
 
