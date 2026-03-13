@@ -246,11 +246,11 @@ function GalleryContent() {
                 <p className="text-zinc-600 text-sm mb-6">
                   {images.length} {images.length === 1 ? 'image' : 'images'}
                 </p>
-                <div className="space-y-0">
+                <div className="-mx-6 lg:-mx-12">
                   {images.map((image, index) => (
                     <div
                       key={image.id}
-                      className="relative h-[calc(100vh-4rem)] lg:h-screen cursor-pointer group bg-black"
+                      className="relative h-[80vh] lg:h-screen cursor-pointer group bg-black"
                       onClick={() => openLightbox(index)}
                     >
                       <div className="absolute inset-0 bg-black">

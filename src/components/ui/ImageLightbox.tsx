@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { Image as ImageType } from '@/types';
 
@@ -19,6 +19,7 @@ export default function ImageLightbox({
   onNavigate,
 }: ImageLightboxProps) {
   const currentImage = images[currentIndex];
+  const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
@@ -48,18 +49,32 @@ export default function ImageLightbox({
     }
   };
 
-  // Use storage_path instead of imageUrl to match Supabase schema
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) handleNext();
+      else handlePrev();
+    }
+    touchStartX.current = null;
+  };
+
   const imageSrc = (currentImage as any).storage_path || (currentImage as any).imageUrl;
 
   return (
     <div
       className="fixed inset-0 z-50 bg-black flex items-center justify-center"
-      onClick={onClose}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
-      {/* Close button - minimalist X */}
+      {/* Close button */}
       <button
         onClick={onClose}
-        className="absolute top-6 right-6 text-white/80 hover:text-white transition-colors z-20 text-3xl font-light"
+        className="absolute top-4 right-4 lg:top-6 lg:right-6 text-white/80 hover:text-white transition-colors z-20 text-3xl font-light p-2"
         aria-label="Close"
       >
         ×
@@ -72,10 +87,10 @@ export default function ImageLightbox({
             e.stopPropagation();
             handlePrev();
           }}
-          className="absolute left-6 text-white/60 hover:text-white transition-colors z-20"
+          className="absolute left-2 lg:left-6 text-white/60 hover:text-white transition-colors z-20 p-2"
           aria-label="Previous image"
         >
-          <ChevronLeft size={40} strokeWidth={1} />
+          <ChevronLeft size={32} className="lg:w-10 lg:h-10" strokeWidth={1} />
         </button>
       )}
 
@@ -86,20 +101,17 @@ export default function ImageLightbox({
             e.stopPropagation();
             handleNext();
           }}
-          className="absolute right-6 text-white/60 hover:text-white transition-colors z-20"
+          className="absolute right-2 lg:right-6 text-white/60 hover:text-white transition-colors z-20 p-2"
           aria-label="Next image"
         >
-          <ChevronRight size={40} strokeWidth={1} />
+          <ChevronRight size={32} className="lg:w-10 lg:h-10" strokeWidth={1} />
         </button>
       )}
 
-      {/* Image - fills the screen */}
+      {/* Image */}
       <div
         className="relative w-full h-full"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-        }}
+        onClick={onClose}
       >
         <Image
           src={imageSrc}
@@ -112,8 +124,8 @@ export default function ImageLightbox({
         />
       </div>
 
-      {/* Counter - minimalist */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 text-white/60 text-sm font-light tracking-wider">
+      {/* Counter */}
+      <div className="absolute bottom-4 lg:bottom-6 left-1/2 transform -translate-x-1/2 text-white/60 text-sm font-light tracking-wider">
         {currentIndex + 1} / {images.length}
       </div>
     </div>
