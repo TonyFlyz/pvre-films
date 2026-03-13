@@ -228,7 +228,7 @@ function GalleryContent() {
                       className="relative h-[calc(100vh-4rem)] lg:h-screen cursor-pointer group bg-black"
                       onClick={() => openLightbox(index)}
                     >
-                      <div className="absolute inset-4 lg:inset-8 bg-black">
+                      <div className="absolute inset-0 bg-black">
                         <Image
                           src={getImageSrc(image)}
                           alt={image.title}
