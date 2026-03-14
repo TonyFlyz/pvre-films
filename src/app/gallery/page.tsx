@@ -291,7 +291,7 @@ function GalleryContent() {
                       {visibleImages.map((image, index) => (
                         <div
                           key={image.id}
-                          className="relative h-[80vh] lg:h-screen cursor-pointer group bg-black"
+                          className="relative h-[40vh] lg:h-[50vh] cursor-pointer group bg-black"
                           onClick={() => openLightbox(index)}
                         >
                           <div className="absolute inset-0 bg-black">
