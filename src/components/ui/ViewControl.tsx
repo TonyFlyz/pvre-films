@@ -7,7 +7,7 @@ interface ViewControlProps {
   onChange: (columns: number) => void;
 }
 
-const OPTIONS = [1, 5, 10, 50];
+const OPTIONS = [1, 5, 10];
 
 export default function ViewControl({ columns, onChange }: ViewControlProps) {
   const [expanded, setExpanded] = useState(false);

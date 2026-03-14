@@ -131,7 +131,7 @@ function HomeContent() {
               Photos
             </h2>
             <div className="relative">
-                {parentCategories.length > 3 && canScrollLeft && (
+                {canScrollLeft && (
                   <button
                     onClick={() => scrollBy('left')}
                     className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2 transition-colors -ml-4"
@@ -140,7 +140,7 @@ function HomeContent() {
                     <ChevronLeft size={24} strokeWidth={1} />
                   </button>
                 )}
-                {parentCategories.length > 3 && canScrollRight && (
+                {canScrollRight && (
                   <button
                     onClick={() => scrollBy('right')}
                     className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/70 hover:bg-black/90 text-white p-2 transition-colors -mr-4"
@@ -153,18 +153,14 @@ function HomeContent() {
                 <div
                   ref={scrollRef}
                   onScroll={updateScrollButtons}
-                  className={`flex gap-6 ${
-                    parentCategories.length > 3
-                      ? 'overflow-x-auto scrollbar-hide'
-                      : 'flex-wrap'
-                  }`}
-                  style={parentCategories.length > 3 ? { scrollbarWidth: 'none', msOverflowStyle: 'none' } : undefined}
+                  className="flex gap-6 overflow-x-auto scrollbar-hide"
+                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 >
                   {parentCategories.map((cat) => (
                     <Link
                       key={cat.id}
                       href={`/gallery?category=${encodeURIComponent(cat.slug.trim())}`}
-                      className="group flex-shrink-0 w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
+                      className="group flex-shrink-0 w-[80vw] sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)]"
                     >
                       <div className="relative aspect-[4/3] bg-zinc-900 overflow-hidden">
                         {cat.cover_image ? (

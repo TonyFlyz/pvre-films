@@ -74,18 +74,16 @@ export default function AdminCategoriesPage() {
     try {
       const uploadFormData = new FormData();
       uploadFormData.append('file', file);
-      uploadFormData.append('title', `cover-${Date.now()}`);
-      uploadFormData.append('isPublished', 'false');
 
-      const response = await fetch('/api/images/upload', {
+      const response = await fetch('/api/categories/upload-cover', {
         method: 'POST',
         body: uploadFormData,
       });
 
       const result = await response.json();
 
-      if (response.ok && result.image) {
-        setFormData({ ...formData, cover_image: result.image.storage_path });
+      if (response.ok && result.url) {
+        setFormData(prev => ({ ...prev, cover_image: result.url }));
       } else {
         setError(result.error || 'Failed to upload cover image');
       }

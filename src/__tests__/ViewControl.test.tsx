@@ -10,7 +10,7 @@ describe('ViewControl', () => {
     // Other options should NOT be visible when collapsed
     expect(screen.queryByText('1')).not.toBeInTheDocument()
     expect(screen.queryByText('10')).not.toBeInTheDocument()
-    expect(screen.queryByText('50')).not.toBeInTheDocument()
+    expect(screen.queryByText('50')).not.toBeInTheDocument() // 50 was removed
   })
 
   it('expands to show all options on click', async () => {
@@ -22,7 +22,7 @@ describe('ViewControl', () => {
     expect(screen.getByText('1')).toBeInTheDocument()
     expect(screen.getByText('5')).toBeInTheDocument()
     expect(screen.getByText('10')).toBeInTheDocument()
-    expect(screen.getByText('50')).toBeInTheDocument()
+    expect(screen.queryByText('50')).not.toBeInTheDocument()
   })
 
   it('calls onChange and collapses when an option is selected', async () => {
@@ -54,6 +54,5 @@ describe('ViewControl', () => {
     expect(screen.getByTitle('1 column')).toBeInTheDocument()
     expect(screen.getByTitle('5 columns')).toBeInTheDocument()
     expect(screen.getByTitle('10 columns')).toBeInTheDocument()
-    expect(screen.getByTitle('50 columns')).toBeInTheDocument()
   })
 })
