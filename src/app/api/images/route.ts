@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getImages, createImage } from '@/lib/supabase';
+import { getImages, createImage, deleteImageRecord } from '@/lib/supabase';
 import { verifyAuth, isAdmin } from '@/lib/auth';
 
 
@@ -24,6 +24,40 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching images:', error);
     return NextResponse.json(
       { error: 'Failed to fetch images' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE bulk images (admin only)
+export async function DELETE(request: NextRequest) {
+  const auth = await verifyAuth();
+  if (!isAdmin(auth)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const { ids } = await request.json();
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return NextResponse.json({ error: 'No image IDs provided' }, { status: 400 });
+    }
+
+    const results = await Promise.allSettled(
+      ids.map((id: string) => deleteImageRecord(id))
+    );
+
+    const failed = results.filter((r) => r.status === 'rejected').length;
+
+    return NextResponse.json({
+      success: true,
+      deleted: ids.length - failed,
+      failed,
+    });
+  } catch (error) {
+    console.error('Error bulk deleting images:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete images' },
       { status: 500 }
     );
   }

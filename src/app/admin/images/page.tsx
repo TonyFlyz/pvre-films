@@ -47,6 +47,59 @@ export default function AdminImagesPage() {
 
   const [viewColumns, setViewColumns] = useState(5);
 
+  // Bulk select/delete state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredImages.map((img) => img.id)));
+  };
+
+  const selectNone = () => {
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`Delete ${selectedIds.size} image${selectedIds.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+
+    setBulkDeleting(true);
+    try {
+      const res = await fetch('/api/images', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) }),
+      });
+
+      if (!res.ok) throw new Error('Failed to delete');
+
+      const result = await res.json();
+      if (result.failed > 0) {
+        alert(`Deleted ${result.deleted} images. ${result.failed} failed.`);
+      }
+
+      setSelectedIds(new Set());
+      setSelectMode(false);
+      await fetchData();
+      window.dispatchEvent(new Event('sidebarRefresh'));
+    } catch (error) {
+      console.error('Bulk delete error:', error);
+      alert('Failed to delete images');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
   // Drag reorder state
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
   const [dragOverImageId, setDragOverImageId] = useState<string | null>(null);
@@ -95,6 +148,12 @@ export default function AdminImagesPage() {
            file.name.toLowerCase().endsWith('.heif') ||
            file.type === 'image/heic' ||
            file.type === 'image/heif';
+  };
+
+  const isTIFFile = (file: File) => {
+    return file.name.toLowerCase().endsWith('.tif') ||
+           file.name.toLowerCase().endsWith('.tiff') ||
+           file.type === 'image/tiff';
   };
 
   // Upload a single file directly to Supabase via signed URL
@@ -198,6 +257,20 @@ export default function AdminImagesPage() {
         console.error('HEIC conversion error:', error);
         setUploadError('Failed to convert HEIC image.');
       }
+    } else if (isTIFFile(file)) {
+      try {
+        setUploadError('Converting TIF image...');
+        const convertedFile = await convertTIF(file);
+        setSelectedFile(convertedFile);
+        setUploadError('');
+
+        const reader = new FileReader();
+        reader.onloadend = () => setPreviewUrl(reader.result as string);
+        reader.readAsDataURL(convertedFile);
+      } catch (error) {
+        console.error('TIF conversion error:', error);
+        setUploadError('Failed to convert TIF image.');
+      }
     } else {
       setSelectedFile(file);
       const reader = new FileReader();
@@ -262,7 +335,7 @@ export default function AdminImagesPage() {
       const response = await fetch(`/api/images/${image.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...image, isPublished: !image.isPublished }),
+        body: JSON.stringify({ ...image, isPublished: !isPublished(image) }),
       });
 
       if (response.ok) {
@@ -389,6 +462,32 @@ export default function AdminImagesPage() {
     );
   };
 
+  const convertTIF = async (file: File): Promise<File> => {
+    const UTIF = (await import('utif2')).default;
+    const buffer = await file.arrayBuffer();
+    const ifds = UTIF.decode(buffer);
+    UTIF.decodeImage(buffer, ifds[0]);
+    const rgba = UTIF.toRGBA8(ifds[0]);
+    const { width, height } = ifds[0];
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d')!;
+    const imageData = ctx.createImageData(width, height);
+    imageData.data.set(new Uint8Array(rgba));
+    ctx.putImageData(imageData, 0, 0);
+
+    const blob = await new Promise<Blob>((resolve) =>
+      canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.9)
+    );
+    return new File(
+      [blob],
+      file.name.replace(/\.tiff?$/i, '.jpg'),
+      { type: 'image/jpeg' }
+    );
+  };
+
   const handleBulkUpload = async () => {
     if (!bulkCategory || bulkFiles.length === 0) return;
 
@@ -411,6 +510,8 @@ export default function AdminImagesPage() {
         let fileToUpload = bf.file;
         if (isHEICFile(bf.file)) {
           fileToUpload = await convertHEIC(bf.file);
+        } else if (isTIFFile(bf.file)) {
+          fileToUpload = await convertTIF(bf.file);
         }
 
         await directUpload(fileToUpload, {
@@ -475,6 +576,10 @@ export default function AdminImagesPage() {
     return image.category_id || image.categoryId;
   };
 
+  const isPublished = (image: any) => {
+    return image.is_featured ?? image.isPublished ?? true;
+  };
+
   const filteredImages = filterCategory === 'all'
     ? images
     : images.filter(img => getCategoryId(img) === filterCategory);
@@ -500,35 +605,74 @@ export default function AdminImagesPage() {
               <h1 className="text-lg font-light text-white tracking-wide">Images</h1>
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex border border-zinc-800">
-                <button
-                  onClick={() => { setUploadMode('single'); setShowUploadForm(true); }}
-                  className={`px-3 py-2 text-xs transition-colors ${
-                    uploadMode === 'single' && showUploadForm
-                      ? 'bg-white text-black'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  Single
-                </button>
-                <button
-                  onClick={() => { setUploadMode('bulk'); setShowUploadForm(true); }}
-                  className={`px-3 py-2 text-xs transition-colors ${
-                    uploadMode === 'bulk' && showUploadForm
-                      ? 'bg-white text-black'
-                      : 'text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  Bulk
-                </button>
-              </div>
-              <button
-                onClick={() => setShowUploadForm(!showUploadForm)}
-                className="flex items-center gap-2 px-4 py-2 bg-white text-black text-sm hover:bg-zinc-200 transition-colors"
-              >
-                <Upload size={16} />
-                Upload
-              </button>
+              {selectMode ? (
+                <>
+                  <button
+                    onClick={selectAll}
+                    className="px-3 py-2 text-xs text-zinc-400 hover:text-white transition-colors"
+                  >
+                    Select All
+                  </button>
+                  <button
+                    onClick={selectNone}
+                    className="px-3 py-2 text-xs text-zinc-400 hover:text-white transition-colors"
+                  >
+                    Deselect
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={selectedIds.size === 0 || bulkDeleting}
+                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white text-sm hover:bg-red-500 transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 size={16} />
+                    {bulkDeleting ? 'Deleting...' : `Delete ${selectedIds.size}`}
+                  </button>
+                  <button
+                    onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
+                    className="px-3 py-2 text-xs text-zinc-400 hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setSelectMode(true)}
+                    className="px-3 py-2 text-xs text-zinc-400 hover:text-white transition-colors border border-zinc-800"
+                  >
+                    Select
+                  </button>
+                  <div className="flex border border-zinc-800">
+                    <button
+                      onClick={() => { setUploadMode('single'); setShowUploadForm(true); }}
+                      className={`px-3 py-2 text-xs transition-colors ${
+                        uploadMode === 'single' && showUploadForm
+                          ? 'bg-white text-black'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      Single
+                    </button>
+                    <button
+                      onClick={() => { setUploadMode('bulk'); setShowUploadForm(true); }}
+                      className={`px-3 py-2 text-xs transition-colors ${
+                        uploadMode === 'bulk' && showUploadForm
+                          ? 'bg-white text-black'
+                          : 'text-zinc-400 hover:text-white'
+                      }`}
+                    >
+                      Bulk
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => setShowUploadForm(!showUploadForm)}
+                    className="flex items-center gap-2 px-4 py-2 bg-white text-black text-sm hover:bg-zinc-200 transition-colors"
+                  >
+                    <Upload size={16} />
+                    Upload
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -871,17 +1015,22 @@ export default function AdminImagesPage() {
             {filteredImages.map((image) => (
               <div
                 key={image.id}
-                draggable
-                onDragStart={() => handleImageDragStart(image.id)}
-                onDragOver={(e) => handleImageDragOver(e, image.id)}
-                onDrop={() => handleImageDrop(image.id)}
-                onDragEnd={handleImageDragEnd}
-                className={`group cursor-grab active:cursor-grabbing transition-all ${
-                  dragOverImageId === image.id
-                    ? 'ring-2 ring-white scale-[1.02]'
-                    : draggedImageId === image.id
-                      ? 'opacity-40'
-                      : ''
+                draggable={!selectMode}
+                onDragStart={!selectMode ? () => handleImageDragStart(image.id) : undefined}
+                onDragOver={!selectMode ? (e) => handleImageDragOver(e, image.id) : undefined}
+                onDrop={!selectMode ? () => handleImageDrop(image.id) : undefined}
+                onDragEnd={!selectMode ? handleImageDragEnd : undefined}
+                onClick={selectMode ? () => toggleSelect(image.id) : undefined}
+                className={`group transition-all ${
+                  selectMode
+                    ? `cursor-pointer ${selectedIds.has(image.id) ? 'ring-2 ring-white' : 'opacity-70 hover:opacity-100'}`
+                    : `cursor-grab active:cursor-grabbing ${
+                        dragOverImageId === image.id
+                          ? 'ring-2 ring-white scale-[1.02]'
+                          : draggedImageId === image.id
+                            ? 'opacity-40'
+                            : ''
+                      }`
                 }`}
               >
                 <div className={`relative aspect-square bg-zinc-900 overflow-hidden ${viewColumns <= 5 ? 'mb-2' : ''}`}>
@@ -892,7 +1041,16 @@ export default function AdminImagesPage() {
                     className="object-cover"
                     sizes={`${Math.round(100 / viewColumns)}vw`}
                   />
-                  {!image.isPublished && viewColumns <= 10 && (
+                  {selectMode && (
+                    <div className={`absolute top-2 left-2 w-5 h-5 border-2 flex items-center justify-center ${
+                      selectedIds.has(image.id)
+                        ? 'bg-white border-white text-black'
+                        : 'border-white/60 bg-black/40'
+                    }`}>
+                      {selectedIds.has(image.id) && <CheckCircle size={14} />}
+                    </div>
+                  )}
+                  {!selectMode && !isPublished(image) && viewColumns <= 10 && (
                     <div className="absolute top-2 left-2 px-2 py-1 bg-black/80 text-zinc-400 text-xs">
                       Draft
                     </div>
@@ -915,9 +1073,9 @@ export default function AdminImagesPage() {
                     <button
                       onClick={() => togglePublish(image)}
                       className="p-2 text-zinc-600 hover:text-white transition-colors"
-                      title={image.isPublished ? 'Unpublish' : 'Publish'}
+                      title={isPublished(image) ? 'Unpublish' : 'Publish'}
                     >
-                      {image.isPublished ? <EyeOff size={14} /> : <Eye size={14} />}
+                      {isPublished(image) ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
                     <button
                       onClick={() => handleDelete(image.id)}

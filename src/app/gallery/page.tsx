@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -29,6 +29,33 @@ function GalleryContent() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [viewColumns, setViewColumns] = useState(1);
+
+  // Infinite scroll
+  const BATCH_SIZE = 50;
+  const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  const loadMore = useCallback(() => {
+    setVisibleCount((prev) => Math.min(prev + BATCH_SIZE, images.length));
+  }, [images.length]);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) loadMore();
+      },
+      { rootMargin: '600px' }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore]);
+
+  // Reset visible count when images change (e.g. switching categories)
+  useEffect(() => {
+    setVisibleCount(BATCH_SIZE);
+  }, [categoryParam]);
 
   // Scroll state for sub-category carousel
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -256,49 +283,57 @@ function GalleryContent() {
                   {images.length} {images.length === 1 ? 'image' : 'images'}
                 </p>
                 <ViewControl columns={viewColumns} onChange={setViewColumns} />
-                {viewColumns === 1 ? (
-                  <div className="-mx-6 lg:-mx-12">
-                    {images.map((image, index) => (
-                      <div
-                        key={image.id}
-                        className="relative h-[80vh] lg:h-screen cursor-pointer group bg-black"
-                        onClick={() => openLightbox(index)}
-                      >
-                        <div className="absolute inset-0 bg-black">
-                          <Image
-                            src={getImageSrc(image)}
-                            alt={image.title}
-                            fill
-                            className="object-contain transition-opacity duration-500 group-hover:opacity-90"
-                            sizes="100vw"
-                            priority={index < 2}
-                          />
+                {(() => {
+                  const visibleImages = images.slice(0, visibleCount);
+                  const hasMore = visibleCount < images.length;
+                  return viewColumns === 1 ? (
+                    <div className="-mx-6 lg:-mx-12">
+                      {visibleImages.map((image, index) => (
+                        <div
+                          key={image.id}
+                          className="relative h-[80vh] lg:h-screen cursor-pointer group bg-black"
+                          onClick={() => openLightbox(index)}
+                        >
+                          <div className="absolute inset-0 bg-black">
+                            <Image
+                              src={getImageSrc(image)}
+                              alt={image.title}
+                              fill
+                              className="object-contain transition-opacity duration-500 group-hover:opacity-90"
+                              sizes="100vw"
+                              priority={index < 2}
+                            />
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div
-                    className="grid gap-1"
-                    style={{ gridTemplateColumns: `repeat(${viewColumns}, 1fr)` }}
-                  >
-                    {images.map((image, index) => (
+                      ))}
+                      {hasMore && <div ref={sentinelRef} className="h-px" />}
+                    </div>
+                  ) : (
+                    <>
                       <div
-                        key={image.id}
-                        className="relative aspect-square bg-zinc-950 cursor-pointer group overflow-hidden"
-                        onClick={() => openLightbox(index)}
+                        className="grid gap-1"
+                        style={{ gridTemplateColumns: `repeat(${viewColumns}, 1fr)` }}
                       >
-                        <Image
-                          src={getImageSrc(image)}
-                          alt={image.title}
-                          fill
-                          className="object-cover transition-opacity duration-300 group-hover:opacity-80"
-                          sizes={`${Math.round(100 / viewColumns)}vw`}
-                        />
+                        {visibleImages.map((image, index) => (
+                          <div
+                            key={image.id}
+                            className="relative aspect-square bg-zinc-950 cursor-pointer group overflow-hidden"
+                            onClick={() => openLightbox(index)}
+                          >
+                            <Image
+                              src={getImageSrc(image)}
+                              alt={image.title}
+                              fill
+                              className="object-cover transition-opacity duration-300 group-hover:opacity-80"
+                              sizes={`${Math.round(100 / viewColumns)}vw`}
+                            />
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
+                      {hasMore && <div ref={sentinelRef} className="h-px" />}
+                    </>
+                  );
+                })()}
               </>
             )}
           </>
