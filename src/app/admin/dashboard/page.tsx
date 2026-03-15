@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { LogOut, Image as ImageIcon, FolderOpen, Settings as SettingsIcon, Video } from 'lucide-react';
+import { LogOut, Image as ImageIcon, FolderOpen, Settings as SettingsIcon, Video, MessageCircle } from 'lucide-react';
 import Image from 'next/image';
 import { Image as ImageType, Category } from '@/types';
 
@@ -18,6 +18,7 @@ export default function AdminDashboard() {
   const [images, setImages] = useState<ImageType[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [videos, setVideos] = useState<VideoType[]>([]);
+  const [pendingThreadCount, setPendingThreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,11 +26,13 @@ export default function AdminDashboard() {
       fetch('/api/images').then((res) => res.json()),
       fetch('/api/categories').then((res) => res.json()),
       fetch('/api/videos').then((res) => res.json()).catch(() => []),
+      fetch('/api/thread?status=pending').then((res) => res.json()).catch(() => []),
     ])
-      .then(([imagesData, categoriesData, videosData]) => {
+      .then(([imagesData, categoriesData, videosData, threadData]) => {
         setImages(Array.isArray(imagesData) ? imagesData : []);
         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
         setVideos(Array.isArray(videosData) ? videosData : []);
+        setPendingThreadCount(Array.isArray(threadData) ? threadData.length : 0);
         setLoading(false);
       })
       .catch((error) => {
@@ -84,7 +87,7 @@ export default function AdminDashboard() {
       {/* Dashboard Content */}
       <div className="px-6 lg:px-12 py-8">
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-12">
           <div className="p-6 border border-zinc-900">
             <p className="text-xs text-zinc-600 mb-2">Images</p>
             <p className="text-2xl font-light text-white">{images.length}</p>
@@ -102,6 +105,10 @@ export default function AdminDashboard() {
             <p className="text-2xl font-light text-white">
               {images.filter((img) => img.isPublished).length}
             </p>
+          </div>
+          <div className="p-6 border border-zinc-900">
+            <p className="text-xs text-zinc-600 mb-2">Pending Messages</p>
+            <p className="text-2xl font-light text-white">{pendingThreadCount}</p>
           </div>
         </div>
 
@@ -128,7 +135,7 @@ export default function AdminDashboard() {
         {/* Quick Actions */}
         <div>
           <h2 className="text-sm text-zinc-600 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <Link
               href="/admin/images"
               className="p-6 border border-zinc-800 hover:border-zinc-600 transition-colors group"
@@ -170,6 +177,17 @@ export default function AdminDashboard() {
               <h3 className="text-sm text-white mb-1">Site Settings</h3>
               <p className="text-xs text-zinc-600">
                 Update contact and social info
+              </p>
+            </Link>
+
+            <Link
+              href="/admin/thread"
+              className="p-6 border border-zinc-800 hover:border-zinc-600 transition-colors group"
+            >
+              <MessageCircle size={20} className="text-zinc-600 group-hover:text-white mb-3 transition-colors" />
+              <h3 className="text-sm text-white mb-1">Thread Messages</h3>
+              <p className="text-xs text-zinc-600">
+                Moderate anonymous messages
               </p>
             </Link>
           </div>
