@@ -348,3 +348,59 @@ export async function deleteVideo(id: string) {
 
   if (error) throw error
 }
+
+// Thread message types and operations
+export interface ThreadMessage {
+  id: string
+  content: string
+  status: 'pending' | 'approved'
+  created_at: string
+}
+
+export async function getThreadMessages(status?: string) {
+  let query = supabaseAdmin
+    .from('thread_messages')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  if (status) {
+    query = query.eq('status', status)
+  }
+
+  const { data, error } = await query
+
+  if (error) throw error
+  return data as ThreadMessage[]
+}
+
+export async function createThreadMessage(content: string) {
+  const { data, error } = await supabaseAdmin
+    .from('thread_messages')
+    .insert([{ content }])
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as ThreadMessage
+}
+
+export async function updateThreadMessageStatus(id: string, status: string) {
+  const { data, error } = await supabaseAdmin
+    .from('thread_messages')
+    .update({ status })
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as ThreadMessage
+}
+
+export async function deleteThreadMessage(id: string) {
+  const { error } = await supabaseAdmin
+    .from('thread_messages')
+    .delete()
+    .eq('id', id)
+
+  if (error) throw error
+}
